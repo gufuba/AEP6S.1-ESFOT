@@ -13,9 +13,9 @@ gratuito, mas em geral controlam as inscrições em planilhas soltas ou de memó
 o que causa perda de histórico quando voluntários trocam, dificulta saber quantos
 alunos estão ativos por turma/turno, e prejudica a prestação de contas a financiadores.
 
-O **EduConecta** ataca esse problema operacional com uma API para cadastrar,
-consultar, atualizar e remover alunos inscritos em programas de reforço escolar
-gratuito de forma centralizada e persistente.
+O **EduConecta** ataca esse problema operacional com uma API para gerenciar alunos,
+professores voluntários, turmas e matrículas de programas de reforço escolar gratuito
+de forma centralizada e persistente.
 
 ## 2. ODS Atendido
 
@@ -38,22 +38,39 @@ continuidade desses programas.
 | Testes              | JUnit 5 + Mockito + Spring MockMvc                  |
 | Cobertura de testes | JaCoCo (mínimo de 70% configurado no `pom.xml`)     |
 
-## 4. Escopo desta Entrega (1ª Entrega)
+## 4. Escopo desta Entrega (2ª Entrega)
 
-Conforme o escopo da primeira entrega: uma única coleção NoSQL (`alunos`,
-no banco `educonecta`), objetos homogêneos e de estrutura simples, com CRUD básico
-exposto via API REST.
+Evolução da primeira entrega (uma única coleção `alunos`) para o escopo do 2º semestre da AEP,
+no banco `educonecta`:
+
+- **Múltiplas coleções:** `alunos`, `voluntarios` e `turmas`.
+- **Relacionamento entre coleções:** cada turma referencia o voluntário responsável e cada aluno
+  referencia a turma em que está matriculado (`ObjectId`).
+- **Objetos complexos:** o aluno guarda o `endereco` como subdocumento e os `responsaveis` como
+  lista de subdocumentos.
+
+```mermaid
+erDiagram
+    VOLUNTARIOS ||--o{ TURMAS : "conduz"
+    TURMAS ||--o{ ALUNOS : "matricula"
+```
 
 ```json
 {
   "_id": "ObjectId(...)",
   "nome": "Maria Silva",
   "idade": 10,
-  "curso": "Matemática",
+  "curso": "Matematica",
   "turno": "Tarde",
-  "ativo": true
+  "ativo": true,
+  "endereco": { "rua": "Rua das Flores, 120", "bairro": "Jardim Alvorada", "cidade": "Maringa", "estado": "PR" },
+  "responsaveis": [ { "nome": "Ana Souza", "parentesco": "Mae", "telefone": "44999991234" } ],
+  "turmaId": "ObjectId(...)"
 }
 ```
+
+Campos, tipos, índices e decisões de modelagem de todas as coleções estão na
+[documentação técnica](docs/DOCUMENTACAO_TECNICA.md#3-modelagem-do-banco-de-dados-mongodb).
 
 ## 5. Como Executar
 
@@ -71,18 +88,18 @@ Ou direto pela IDE: rode a classe `EduConectaApplication`. Com a API no ar, aces
 http://localhost:8080/swagger-ui.html
 ```
 
-Endpoints disponíveis:
+Recursos disponíveis (CRUD completo nos três primeiros; 18 endpoints no total):
 
-| Método | Endpoint            | O que faz                    |
-|--------|----------------------|-------------------------------|
-| POST   | `/api/alunos`        | Cadastra um novo aluno        |
-| GET    | `/api/alunos`        | Lista todos os alunos         |
-| GET    | `/api/alunos/{id}`   | Busca um aluno pelo id        |
-| PUT    | `/api/alunos/{id}`   | Atualiza os dados de um aluno |
-| DELETE | `/api/alunos/{id}`   | Remove um aluno               |
+| Recurso      | Endpoint base                    | O que faz                                          |
+|--------------|-----------------------------------|-----------------------------------------------------|
+| Alunos       | `/api/alunos`                     | Cadastro de alunos, com endereço e responsáveis     |
+| Voluntários  | `/api/voluntarios`                | Professores voluntários e suas disciplinas          |
+| Turmas       | `/api/turmas`                     | Turmas de reforço, cada uma com um voluntário       |
+| Matrículas   | `/api/turmas/{turmaId}/alunos`    | Lista, matricula (`POST .../{alunoId}`) e desmatricula (`DELETE .../{alunoId}`) |
 
 Basta abrir cada endpoint no Swagger, clicar em **"Try it out"** e **"Execute"** —
-os campos já vêm com exemplo preenchido.
+os campos já vêm com exemplo preenchido. A ordem sugerida para testar (voluntário → turma →
+aluno → matrícula) e as regras de negócio estão na documentação técnica.
 
 ## 6. Como Rodar os Testes e Gerar o Relatório de Cobertura
 
@@ -94,11 +111,20 @@ mvn clean verify
 ```
 
 Executa os testes, gera o relatório em `target/site/jacoco/index.html` e **falha o
-build automaticamente** se a cobertura ficar abaixo de 70% (regra no `pom.xml`).
+build automaticamente** se a cobertura ficar abaixo de 70% (regra no `pom.xml`). A cobertura é
+medida sobre **todo** o código-fonte, sem exclusões.
 
-> As classes `EduConectaApplication` e `config/MongoConfig` são excluídas da métrica
-> por serem apenas bootstrap/infraestrutura, sem regra de negócio própria.
+Para validar o fluxo completo contra um MongoDB real, há o script
+[`scripts/teste-e2e.ps1`](scripts/teste-e2e.ps1) (instruções no cabeçalho do arquivo).
 
-## 7. Versão desta Entrega
+## 7. Documentação e Acompanhamento
 
-Esta versão corresponde à **Primeira Entrega** da AEP (tag `entrega-1`).
+- [Documentação técnica](docs/DOCUMENTACAO_TECNICA.md): arquitetura, estrutura do banco, regras de
+  negócio, API, instalação, execução e testes.
+- [Quadro de tarefas](docs/QUADRO_DE_TAREFAS.md): metodologia (Kanban) e cartões com os commits
+  correspondentes.
+
+## 8. Versão desta Entrega
+
+Esta versão corresponde à **Segunda Entrega** da AEP (tag `entrega-2`). A primeira entrega
+permanece identificada pela tag `entrega-1`.
