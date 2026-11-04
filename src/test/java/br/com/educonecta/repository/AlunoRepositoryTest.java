@@ -42,39 +42,46 @@ class AlunoRepositoryTest {
         repository = new AlunoRepository(database);
     }
 
+    private Document documentoDeAluno(ObjectId id, String nome, int idade, String curso, String turno) {
+        return new Document("_id", id)
+                .append("nome", nome).append("idade", idade)
+                .append("curso", curso).append("turno", turno).append("ativo", true);
+    }
+
     @Test
     void deveInserirAlunoEDefinirIdGerado() {
         Aluno aluno = new Aluno("Maria", 10, "Matematica", "Tarde");
+        ObjectId idGerado = new ObjectId();
 
         doAnswer(invocation -> {
             Document document = invocation.getArgument(0);
-            document.put("_id", new ObjectId());
+            document.put("_id", idGerado);
             return null;
         }).when(collection).insertOne(any(Document.class));
 
         Aluno resultado = repository.inserir(aluno);
 
-        assertNotNull(resultado.getId());
-        verify(collection).insertOne(any(Document.class));
+        assertEquals(idGerado.toHexString(), resultado.getId());
+        verify(collection).insertOne(argThat(doc ->
+                "Maria".equals(doc.getString("nome"))
+                        && Integer.valueOf(10).equals(doc.getInteger("idade"))
+                        && "Matematica".equals(doc.getString("curso"))
+                        && "Tarde".equals(doc.getString("turno"))
+                        && Boolean.TRUE.equals(doc.getBoolean("ativo"))));
     }
 
     @Test
     void deveBuscarAlunoPorIdQuandoExiste() {
         ObjectId objectId = new ObjectId();
-        Document document = new Document("_id", objectId)
-                .append("nome", "Maria")
-                .append("idade", 10)
-                .append("curso", "Matematica")
-                .append("turno", "Tarde")
-                .append("ativo", true);
-
         when(collection.find(any(Document.class))).thenReturn(findIterable);
-        when(findIterable.first()).thenReturn(document);
+        when(findIterable.first()).thenReturn(documentoDeAluno(objectId, "Maria", 10, "Matematica", "Tarde"));
 
         Aluno resultado = repository.buscarPorId(objectId.toHexString());
 
         assertEquals(objectId.toHexString(), resultado.getId());
         assertEquals("Maria", resultado.getNome());
+        assertEquals(10, resultado.getIdade());
+        assertTrue(resultado.isAtivo());
     }
 
     @Test
@@ -82,28 +89,33 @@ class AlunoRepositoryTest {
         when(collection.find(any(Document.class))).thenReturn(findIterable);
         when(findIterable.first()).thenReturn(null);
 
-        Aluno resultado = repository.buscarPorId(new ObjectId().toHexString());
+        assertNull(repository.buscarPorId(new ObjectId().toHexString()));
+    }
 
-        assertNull(resultado);
+    @Test
+    void deveRejeitarIdQueNaoEUmObjectIdValido() {
+        IllegalArgumentException erro = assertThrows(IllegalArgumentException.class,
+                () -> repository.buscarPorId("id-invalido"));
+
+        assertTrue(erro.getMessage().contains("id-invalido"));
+        verifyNoInteractions(findIterable);
+    }
+
+    @Test
+    void deveRejeitarIdNulo() {
+        assertThrows(IllegalArgumentException.class, () -> repository.remover(null));
     }
 
     @SuppressWarnings("unchecked")
     @Test
     void deveListarTodosOsAlunos() {
-        ObjectId id1 = new ObjectId();
-        ObjectId id2 = new ObjectId();
-        Document doc1 = new Document("_id", id1)
-                .append("nome", "Maria").append("idade", 10)
-                .append("curso", "Matematica").append("turno", "Tarde").append("ativo", true);
-        Document doc2 = new Document("_id", id2)
-                .append("nome", "Joao").append("idade", 12)
-                .append("curso", "Portugues").append("turno", "Manha").append("ativo", true);
+        Document doc1 = documentoDeAluno(new ObjectId(), "Maria", 10, "Matematica", "Tarde");
+        Document doc2 = documentoDeAluno(new ObjectId(), "Joao", 12, "Portugues", "Manha");
 
         MongoCursor<Document> cursor = mock(MongoCursor.class);
         Iterator<Document> iterator = List.of(doc1, doc2).iterator();
         when(cursor.hasNext()).thenAnswer(inv -> iterator.hasNext());
         when(cursor.next()).thenAnswer(inv -> iterator.next());
-
         when(collection.find()).thenReturn(findIterable);
         when(findIterable.iterator()).thenReturn(cursor);
 
@@ -115,48 +127,40 @@ class AlunoRepositoryTest {
     }
 
     @Test
-    void deveAtualizarAlunoComSucesso() {
+    void deveAtualizarAlunoSubstituindoODocumento() {
         Aluno aluno = new Aluno(new ObjectId().toHexString(), "Maria", 11, "Matematica", "Tarde", true);
-        UpdateResult updateResult = mock(UpdateResult.class);
-        when(updateResult.getModifiedCount()).thenReturn(1L);
-        when(collection.updateOne(any(Document.class), any(Document.class))).thenReturn(updateResult);
+        UpdateResult resultado = mock(UpdateResult.class);
+        when(resultado.getMatchedCount()).thenReturn(1L);
+        when(collection.replaceOne(any(Document.class), any(Document.class))).thenReturn(resultado);
 
-        boolean atualizado = repository.atualizar(aluno);
-
-        assertTrue(atualizado);
+        assertTrue(repository.atualizar(aluno));
     }
 
     @Test
-    void deveRetornarFalsoQuandoAtualizacaoNaoAlteraNada() {
+    void deveRetornarFalsoQuandoNenhumDocumentoCorresponde() {
         Aluno aluno = new Aluno(new ObjectId().toHexString(), "Maria", 11, "Matematica", "Tarde", true);
-        UpdateResult updateResult = mock(UpdateResult.class);
-        when(updateResult.getModifiedCount()).thenReturn(0L);
-        when(collection.updateOne(any(Document.class), any(Document.class))).thenReturn(updateResult);
+        UpdateResult resultado = mock(UpdateResult.class);
+        when(resultado.getMatchedCount()).thenReturn(0L);
+        when(collection.replaceOne(any(Document.class), any(Document.class))).thenReturn(resultado);
 
-        boolean atualizado = repository.atualizar(aluno);
-
-        assertFalse(atualizado);
+        assertFalse(repository.atualizar(aluno));
     }
 
     @Test
     void deveRemoverAlunoComSucesso() {
-        DeleteResult deleteResult = mock(DeleteResult.class);
-        when(deleteResult.getDeletedCount()).thenReturn(1L);
-        when(collection.deleteOne(any(Document.class))).thenReturn(deleteResult);
+        DeleteResult resultado = mock(DeleteResult.class);
+        when(resultado.getDeletedCount()).thenReturn(1L);
+        when(collection.deleteOne(any(Document.class))).thenReturn(resultado);
 
-        boolean removido = repository.remover(new ObjectId().toHexString());
-
-        assertTrue(removido);
+        assertTrue(repository.remover(new ObjectId().toHexString()));
     }
 
     @Test
     void deveRetornarFalsoQuandoNaoRemoveNenhumDocumento() {
-        DeleteResult deleteResult = mock(DeleteResult.class);
-        when(deleteResult.getDeletedCount()).thenReturn(0L);
-        when(collection.deleteOne(any(Document.class))).thenReturn(deleteResult);
+        DeleteResult resultado = mock(DeleteResult.class);
+        when(resultado.getDeletedCount()).thenReturn(0L);
+        when(collection.deleteOne(any(Document.class))).thenReturn(resultado);
 
-        boolean removido = repository.remover(new ObjectId().toHexString());
-
-        assertFalse(removido);
+        assertFalse(repository.remover(new ObjectId().toHexString()));
     }
 }

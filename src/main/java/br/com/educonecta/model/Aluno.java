@@ -1,14 +1,12 @@
 package br.com.educonecta.model;
 
-import java.util.Objects;
-
 /**
  * Representa um aluno inscrito no programa de reforco escolar gratuito.
- * Estrutura simples e homogenea, conforme escopo da primeira entrega da AEP.
  */
-public class Aluno {
+public class Aluno extends Entidade {
 
-    private String id;
+    public static final int IDADE_MAXIMA = 120;
+
     private String nome;
     private int idade;
     private String curso;
@@ -24,16 +22,8 @@ public class Aluno {
         setIdade(idade);
         setCurso(curso);
         setTurno(turno);
-        this.id = id;
+        setId(id);
         this.ativo = ativo;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
     }
 
     public String getNome() {
@@ -41,10 +31,7 @@ public class Aluno {
     }
 
     public void setNome(String nome) {
-        if (nome == null || nome.isBlank()) {
-            throw new IllegalArgumentException("Nome do aluno nao pode ser vazio.");
-        }
-        this.nome = nome.trim();
+        this.nome = Validacoes.textoObrigatorio(nome, "Nome do aluno nao pode ser vazio.");
     }
 
     public int getIdade() {
@@ -52,7 +39,7 @@ public class Aluno {
     }
 
     public void setIdade(int idade) {
-        if (idade < 0 || idade > 120) {
+        if (idade < 0 || idade > IDADE_MAXIMA) {
             throw new IllegalArgumentException("Idade informada e invalida.");
         }
         this.idade = idade;
@@ -63,10 +50,7 @@ public class Aluno {
     }
 
     public void setCurso(String curso) {
-        if (curso == null || curso.isBlank()) {
-            throw new IllegalArgumentException("Curso/disciplina de reforco nao pode ser vazio.");
-        }
-        this.curso = curso.trim();
+        this.curso = Validacoes.textoObrigatorio(curso, "Curso/disciplina de reforco nao pode ser vazio.");
     }
 
     public String getTurno() {
@@ -74,10 +58,7 @@ public class Aluno {
     }
 
     public void setTurno(String turno) {
-        if (turno == null || turno.isBlank()) {
-            throw new IllegalArgumentException("Turno nao pode ser vazio.");
-        }
-        this.turno = turno.trim();
+        this.turno = Validacoes.textoObrigatorio(turno, "Turno nao pode ser vazio.");
     }
 
     public boolean isAtivo() {
@@ -88,23 +69,18 @@ public class Aluno {
         this.ativo = ativo;
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof Aluno)) return false;
-        Aluno aluno = (Aluno) o;
-        return Objects.equals(id, aluno.id);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(id);
+    public void atualizarDados(Aluno novosDados) {
+        setNome(novosDados.nome);
+        setIdade(novosDados.idade);
+        setCurso(novosDados.curso);
+        setTurno(novosDados.turno);
+        setAtivo(novosDados.ativo);
     }
 
     @Override
     public String toString() {
         return "Aluno{" +
-                "id='" + id + '\'' +
+                "id='" + getId() + '\'' +
                 ", nome='" + nome + '\'' +
                 ", idade=" + idade +
                 ", curso='" + curso + '\'' +

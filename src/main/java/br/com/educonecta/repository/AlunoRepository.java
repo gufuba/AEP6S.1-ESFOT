@@ -1,63 +1,24 @@
 package br.com.educonecta.repository;
 
 import br.com.educonecta.model.Aluno;
-import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
-import com.mongodb.client.result.DeleteResult;
 import org.bson.Document;
-import org.bson.types.ObjectId;
 import org.springframework.stereotype.Repository;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
- * Camada de acesso a dados. Encapsula a colecao "alunos" no MongoDB
- * e converte entre {@link Aluno} e {@link Document}.
+ * Acesso a colecao "alunos" do MongoDB.
  */
 @Repository
-public class AlunoRepository {
+public class AlunoRepository extends MongoCrudRepository<Aluno> {
 
-    private static final String COLLECTION_NAME = "alunos";
-
-    private final MongoCollection<Document> collection;
+    public static final String COLECAO = "alunos";
 
     public AlunoRepository(MongoDatabase database) {
-        this.collection = database.getCollection(COLLECTION_NAME);
+        super(database, COLECAO);
     }
 
-    public Aluno inserir(Aluno aluno) {
-        Document document = toDocument(aluno);
-        collection.insertOne(document);
-        aluno.setId(document.getObjectId("_id").toHexString());
-        return aluno;
-    }
-
-    public Aluno buscarPorId(String id) {
-        Document document = collection.find(new Document("_id", new ObjectId(id))).first();
-        return document == null ? null : toAluno(document);
-    }
-
-    public List<Aluno> listarTodos() {
-        List<Aluno> alunos = new ArrayList<>();
-        for (Document document : collection.find()) {
-            alunos.add(toAluno(document));
-        }
-        return alunos;
-    }
-
-    public boolean atualizar(Aluno aluno) {
-        Document filtro = new Document("_id", new ObjectId(aluno.getId()));
-        Document atualizacao = new Document("$set", toDocument(aluno));
-        return collection.updateOne(filtro, atualizacao).getModifiedCount() > 0;
-    }
-
-    public boolean remover(String id) {
-        DeleteResult resultado = collection.deleteOne(new Document("_id", new ObjectId(id)));
-        return resultado.getDeletedCount() > 0;
-    }
-
-    private Document toDocument(Aluno aluno) {
+    @Override
+    protected Document toDocument(Aluno aluno) {
         return new Document("nome", aluno.getNome())
                 .append("idade", aluno.getIdade())
                 .append("curso", aluno.getCurso())
@@ -65,7 +26,8 @@ public class AlunoRepository {
                 .append("ativo", aluno.isAtivo());
     }
 
-    private Aluno toAluno(Document document) {
+    @Override
+    protected Aluno toEntidade(Document document) {
         return new Aluno(
                 document.getObjectId("_id").toHexString(),
                 document.getString("nome"),

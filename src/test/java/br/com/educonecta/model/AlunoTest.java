@@ -48,7 +48,7 @@ class AlunoTest {
     @Test
     void naoDevePermitirIdadeAcimaDoLimite() {
         assertThrows(IllegalArgumentException.class,
-                () -> new Aluno("Maria", 121, "Matematica", "Tarde"));
+                () -> new Aluno("Maria", Aluno.IDADE_MAXIMA + 1, "Matematica", "Tarde"));
     }
 
     @Test
@@ -78,6 +78,22 @@ class AlunoTest {
     }
 
     @Test
+    void deveAtualizarDadosPreservandoOId() {
+        Aluno existente = new Aluno("id1", "Maria", 10, "Matematica", "Tarde", true);
+        Aluno novosDados = new Aluno("Maria Souza", 11, "Portugues", "Manha");
+        novosDados.setAtivo(false);
+
+        existente.atualizarDados(novosDados);
+
+        assertEquals("id1", existente.getId());
+        assertEquals("Maria Souza", existente.getNome());
+        assertEquals(11, existente.getIdade());
+        assertEquals("Portugues", existente.getCurso());
+        assertEquals("Manha", existente.getTurno());
+        assertFalse(existente.isAtivo());
+    }
+
+    @Test
     void doisAlunosComMesmoIdDevemSerIguais() {
         Aluno a1 = new Aluno("id1", "Maria", 10, "Matematica", "Tarde", true);
         Aluno a2 = new Aluno("id1", "Outro Nome", 15, "Portugues", "Manha", false);
@@ -87,9 +103,19 @@ class AlunoTest {
     }
 
     @Test
-    void alunoNuncaEIgualANull() {
+    void alunosSemIdNaoDevemSerIguais() {
+        Aluno a1 = new Aluno("Maria", 10, "Matematica", "Tarde");
+        Aluno a2 = new Aluno("Maria", 10, "Matematica", "Tarde");
+
+        assertNotEquals(a1, a2);
+    }
+
+    @Test
+    void alunoNuncaEIgualANullNemAOutroTipo() {
         Aluno aluno = new Aluno("Maria", 10, "Matematica", "Tarde");
+
         assertNotEquals(null, aluno);
+        assertNotEquals("texto", aluno);
     }
 
     @Test

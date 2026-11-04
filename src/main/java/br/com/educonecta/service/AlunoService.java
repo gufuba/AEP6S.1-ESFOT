@@ -1,5 +1,6 @@
 package br.com.educonecta.service;
 
+import br.com.educonecta.exception.RecursoNaoEncontradoException;
 import br.com.educonecta.model.Aluno;
 import br.com.educonecta.repository.AlunoRepository;
 import org.springframework.stereotype.Service;
@@ -7,7 +8,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 /**
- * Camada de regras de negocio do programa de reforco escolar.
+ * Regras de negocio do cadastro de alunos do programa de reforco escolar.
  */
 @Service
 public class AlunoService {
@@ -21,17 +22,14 @@ public class AlunoService {
     }
 
     public Aluno cadastrar(Aluno aluno) {
-        if (aluno.getIdade() < IDADE_MINIMA_PROGRAMA) {
-            throw new IllegalArgumentException(
-                    "Aluno deve ter no minimo " + IDADE_MINIMA_PROGRAMA + " anos para ingressar no programa.");
-        }
+        validarRegras(aluno);
         return repository.inserir(aluno);
     }
 
     public Aluno buscarPorId(String id) {
         Aluno aluno = repository.buscarPorId(id);
         if (aluno == null) {
-            throw new AlunoNaoEncontradoException(id);
+            throw new RecursoNaoEncontradoException("Aluno", id);
         }
         return aluno;
     }
@@ -40,20 +38,24 @@ public class AlunoService {
         return repository.listarTodos();
     }
 
-    public Aluno atualizar(Aluno aluno) {
-        buscarPorId(aluno.getId());
-        repository.atualizar(aluno);
-        return aluno;
+    public Aluno atualizar(String id, Aluno novosDados) {
+        Aluno existente = buscarPorId(id);
+        validarRegras(novosDados);
+        existente.atualizarDados(novosDados);
+        repository.atualizar(existente);
+        return existente;
     }
 
     public void remover(String id) {
-        buscarPorId(id);
-        repository.remover(id);
+        if (!repository.remover(id)) {
+            throw new RecursoNaoEncontradoException("Aluno", id);
+        }
     }
 
-    public static class AlunoNaoEncontradoException extends RuntimeException {
-        public AlunoNaoEncontradoException(String id) {
-            super("Aluno com id " + id + " nao encontrado.");
+    private void validarRegras(Aluno aluno) {
+        if (aluno.getIdade() < IDADE_MINIMA_PROGRAMA) {
+            throw new IllegalArgumentException(
+                    "Aluno deve ter no minimo " + IDADE_MINIMA_PROGRAMA + " anos para ingressar no programa.");
         }
     }
 }

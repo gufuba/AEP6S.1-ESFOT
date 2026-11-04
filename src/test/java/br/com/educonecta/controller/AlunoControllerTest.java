@@ -2,6 +2,7 @@ package br.com.educonecta.controller;
 
 import br.com.educonecta.dto.AlunoRequest;
 import br.com.educonecta.exception.ApiExceptionHandler;
+import br.com.educonecta.exception.RecursoNaoEncontradoException;
 import br.com.educonecta.model.Aluno;
 import br.com.educonecta.service.AlunoService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,8 +23,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
- * Testa a camada web isoladamente (MockMvc standalone), com o servico
- * mockado. Nao sobe contexto Spring nem exige MongoDB em execucao.
+ * Testa a camada web isoladamente (MockMvc standalone), com o servico mockado.
+ * Nao sobe contexto Spring nem exige MongoDB em execucao.
  */
 @ExtendWith(MockitoExtension.class)
 class AlunoControllerTest {
@@ -36,8 +37,7 @@ class AlunoControllerTest {
 
     @BeforeEach
     void setUp() {
-        AlunoController controller = new AlunoController(service);
-        mockMvc = MockMvcBuilders.standaloneSetup(controller)
+        mockMvc = MockMvcBuilders.standaloneSetup(new AlunoController(service))
                 .setControllerAdvice(new ApiExceptionHandler())
                 .build();
     }
@@ -45,19 +45,31 @@ class AlunoControllerTest {
     @Test
     void deveCadastrarAlunoERetornar201() throws Exception {
         AlunoRequest request = new AlunoRequest("Maria", 10, "Matematica", "Tarde");
-        Aluno alunoSalvo = new Aluno("id1", "Maria", 10, "Matematica", "Tarde", true);
-        when(service.cadastrar(any(Aluno.class))).thenReturn(alunoSalvo);
+        when(service.cadastrar(any(Aluno.class)))
+                .thenReturn(new Aluno("id1", "Maria", 10, "Matematica", "Tarde", true));
 
         mockMvc.perform(post("/api/alunos")
                         .contentType("application/json")
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value("id1"))
-                .andExpect(jsonPath("$.nome").value("Maria"));
+                .andExpect(jsonPath("$.nome").value("Maria"))
+                .andExpect(jsonPath("$.ativo").value(true));
     }
 
     @Test
-    void deveRetornar400AoCadastrarAlunoAbaixoDaIdadeMinima() throws Exception {
+    void deveRetornar400QuandoIdadeNaoForInformada() throws Exception {
+        mockMvc.perform(post("/api/alunos")
+                        .contentType("application/json")
+                        .content("{\"nome\":\"Maria\",\"curso\":\"Matematica\",\"turno\":\"Tarde\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensagem").value("Idade do aluno e obrigatoria."));
+
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    void deveRetornar400QuandoServicoRejeitarOCadastro() throws Exception {
         AlunoRequest request = new AlunoRequest("Bebe", 3, "Matematica", "Tarde");
         when(service.cadastrar(any(Aluno.class)))
                 .thenThrow(new IllegalArgumentException("Aluno deve ter no minimo 6 anos para ingressar no programa."));
@@ -71,11 +83,9 @@ class AlunoControllerTest {
 
     @Test
     void deveListarAlunosCadastrados() throws Exception {
-        List<Aluno> alunos = List.of(
+        when(service.listarTodos()).thenReturn(List.of(
                 new Aluno("id1", "Maria", 10, "Matematica", "Tarde", true),
-                new Aluno("id2", "Joao", 12, "Portugues", "Manha", true)
-        );
-        when(service.listarTodos()).thenReturn(alunos);
+                new Aluno("id2", "Joao", 12, "Portugues", "Manha", true)));
 
         mockMvc.perform(get("/api/alunos"))
                 .andExpect(status().isOk())
@@ -85,8 +95,7 @@ class AlunoControllerTest {
 
     @Test
     void deveBuscarAlunoPorIdComSucesso() throws Exception {
-        Aluno aluno = new Aluno("id1", "Maria", 10, "Matematica", "Tarde", true);
-        when(service.buscarPorId("id1")).thenReturn(aluno);
+        when(service.buscarPorId("id1")).thenReturn(new Aluno("id1", "Maria", 10, "Matematica", "Tarde", true));
 
         mockMvc.perform(get("/api/alunos/id1"))
                 .andExpect(status().isOk())
@@ -95,22 +104,19 @@ class AlunoControllerTest {
 
     @Test
     void deveRetornar404QuandoAlunoNaoExiste() throws Exception {
-        when(service.buscarPorId("naoExiste"))
-                .thenThrow(new AlunoService.AlunoNaoEncontradoException("naoExiste"));
+        when(service.buscarPorId("naoExiste")).thenThrow(new RecursoNaoEncontradoException("Aluno", "naoExiste"));
 
         mockMvc.perform(get("/api/alunos/naoExiste"))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.status").value(404));
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.mensagem").value("Aluno com id naoExiste nao encontrado."));
     }
 
     @Test
     void deveAtualizarAlunoExistente() throws Exception {
-        Aluno existente = new Aluno("id1", "Maria", 10, "Matematica", "Tarde", true);
-        Aluno atualizado = new Aluno("id1", "Maria Silva", 11, "Portugues", "Manha", true);
         AlunoRequest request = new AlunoRequest("Maria Silva", 11, "Portugues", "Manha");
-
-        when(service.buscarPorId("id1")).thenReturn(existente);
-        when(service.atualizar(any(Aluno.class))).thenReturn(atualizado);
+        when(service.atualizar(eq("id1"), any(Aluno.class)))
+                .thenReturn(new Aluno("id1", "Maria Silva", 11, "Portugues", "Manha", true));
 
         mockMvc.perform(put("/api/alunos/id1")
                         .contentType("application/json")
@@ -122,11 +128,9 @@ class AlunoControllerTest {
 
     @Test
     void deveRemoverAlunoERetornar204() throws Exception {
-        doNothing().when(service).remover("id1");
-
         mockMvc.perform(delete("/api/alunos/id1"))
                 .andExpect(status().isNoContent());
 
-        verify(service).remover(eq("id1"));
+        verify(service).remover("id1");
     }
 }

@@ -1,5 +1,6 @@
 package br.com.educonecta.service;
 
+import br.com.educonecta.exception.RecursoNaoEncontradoException;
 import br.com.educonecta.model.Aluno;
 import br.com.educonecta.repository.AlunoRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,9 +32,7 @@ class AlunoServiceTest {
         Aluno aluno = new Aluno("Maria", 10, "Matematica", "Tarde");
         when(repository.inserir(aluno)).thenReturn(aluno);
 
-        Aluno resultado = service.cadastrar(aluno);
-
-        assertEquals(aluno, resultado);
+        assertSame(aluno, service.cadastrar(aluno));
         verify(repository).inserir(aluno);
     }
 
@@ -50,69 +49,74 @@ class AlunoServiceTest {
         Aluno aluno = new Aluno("id1", "Maria", 10, "Matematica", "Tarde", true);
         when(repository.buscarPorId("id1")).thenReturn(aluno);
 
-        Aluno resultado = service.buscarPorId("id1");
-
-        assertEquals(aluno, resultado);
+        assertSame(aluno, service.buscarPorId("id1"));
     }
 
     @Test
     void deveLancarExcecaoAoBuscarIdInexistente() {
         when(repository.buscarPorId("naoExiste")).thenReturn(null);
 
-        assertThrows(AlunoService.AlunoNaoEncontradoException.class,
+        RecursoNaoEncontradoException erro = assertThrows(RecursoNaoEncontradoException.class,
                 () -> service.buscarPorId("naoExiste"));
+        assertTrue(erro.getMessage().contains("Aluno"));
     }
 
     @Test
     void deveListarTodosOsAlunos() {
-        List<Aluno> alunos = List.of(
+        when(repository.listarTodos()).thenReturn(List.of(
                 new Aluno("id1", "Maria", 10, "Matematica", "Tarde", true),
-                new Aluno("id2", "Joao", 12, "Portugues", "Manha", true)
-        );
-        when(repository.listarTodos()).thenReturn(alunos);
+                new Aluno("id2", "Joao", 12, "Portugues", "Manha", true)));
 
-        List<Aluno> resultado = service.listarTodos();
-
-        assertEquals(2, resultado.size());
+        assertEquals(2, service.listarTodos().size());
     }
 
     @Test
-    void deveAtualizarAlunoExistente() {
-        Aluno aluno = new Aluno("id1", "Maria", 10, "Matematica", "Tarde", true);
-        when(repository.buscarPorId("id1")).thenReturn(aluno);
+    void deveAtualizarAlunoExistenteBuscandoUmaUnicaVez() {
+        Aluno existente = new Aluno("id1", "Maria", 10, "Matematica", "Tarde", true);
+        Aluno novosDados = new Aluno("Maria Silva", 11, "Portugues", "Manha");
+        when(repository.buscarPorId("id1")).thenReturn(existente);
 
-        Aluno resultado = service.atualizar(aluno);
+        Aluno resultado = service.atualizar("id1", novosDados);
 
-        assertEquals(aluno, resultado);
-        verify(repository).atualizar(aluno);
+        assertEquals("id1", resultado.getId());
+        assertEquals("Maria Silva", resultado.getNome());
+        assertEquals("Portugues", resultado.getCurso());
+        verify(repository, times(1)).buscarPorId("id1");
+        verify(repository).atualizar(existente);
     }
 
     @Test
     void naoDeveAtualizarAlunoInexistente() {
-        Aluno aluno = new Aluno("idInexistente", "Maria", 10, "Matematica", "Tarde", true);
         when(repository.buscarPorId("idInexistente")).thenReturn(null);
+        Aluno novosDados = new Aluno("Maria", 10, "Matematica", "Tarde");
 
-        assertThrows(AlunoService.AlunoNaoEncontradoException.class,
-                () -> service.atualizar(aluno));
+        assertThrows(RecursoNaoEncontradoException.class, () -> service.atualizar("idInexistente", novosDados));
+        verify(repository, never()).atualizar(any());
+    }
+
+    @Test
+    void naoDevePermitirReduzirIdadeAbaixoDoMinimoNaAtualizacao() {
+        Aluno existente = new Aluno("id1", "Maria", 10, "Matematica", "Tarde", true);
+        Aluno novosDados = new Aluno("Maria", 3, "Matematica", "Tarde");
+        when(repository.buscarPorId("id1")).thenReturn(existente);
+
+        assertThrows(IllegalArgumentException.class, () -> service.atualizar("id1", novosDados));
+        assertEquals(10, existente.getIdade());
         verify(repository, never()).atualizar(any());
     }
 
     @Test
     void deveRemoverAlunoExistente() {
-        Aluno aluno = new Aluno("id1", "Maria", 10, "Matematica", "Tarde", true);
-        when(repository.buscarPorId("id1")).thenReturn(aluno);
+        when(repository.remover("id1")).thenReturn(true);
 
-        service.remover("id1");
-
+        assertDoesNotThrow(() -> service.remover("id1"));
         verify(repository).remover("id1");
     }
 
     @Test
     void naoDeveRemoverAlunoInexistente() {
-        when(repository.buscarPorId("idInexistente")).thenReturn(null);
+        when(repository.remover("idInexistente")).thenReturn(false);
 
-        assertThrows(AlunoService.AlunoNaoEncontradoException.class,
-                () -> service.remover("idInexistente"));
-        verify(repository, never()).remover(any());
+        assertThrows(RecursoNaoEncontradoException.class, () -> service.remover("idInexistente"));
     }
 }
