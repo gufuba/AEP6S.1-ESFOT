@@ -3,6 +3,7 @@ package br.com.educonecta.service;
 import br.com.educonecta.exception.ConflitoException;
 import br.com.educonecta.exception.RecursoNaoEncontradoException;
 import br.com.educonecta.model.Voluntario;
+import br.com.educonecta.repository.TurmaRepository;
 import br.com.educonecta.repository.VoluntarioRepository;
 import org.springframework.stereotype.Service;
 
@@ -15,9 +16,11 @@ import java.util.List;
 public class VoluntarioService {
 
     private final VoluntarioRepository repository;
+    private final TurmaRepository turmaRepository;
 
-    public VoluntarioService(VoluntarioRepository repository) {
+    public VoluntarioService(VoluntarioRepository repository, TurmaRepository turmaRepository) {
         this.repository = repository;
+        this.turmaRepository = turmaRepository;
     }
 
     public Voluntario cadastrar(Voluntario voluntario) {
@@ -48,9 +51,11 @@ public class VoluntarioService {
     }
 
     public void remover(String id) {
-        if (!repository.remover(id)) {
-            throw new RecursoNaoEncontradoException("Voluntario", id);
+        buscarPorId(id);
+        if (turmaRepository.existePorVoluntario(id)) {
+            throw new ConflitoException("Voluntario possui turmas vinculadas e nao pode ser removido.");
         }
+        repository.remover(id);
     }
 
     private void garantirEmailDisponivel(String email) {

@@ -82,6 +82,15 @@ class AlunoDtoTest {
         AlunoResponse response = AlunoResponse.fromEntity(aluno);
 
         assertNull(response.endereco());
+        assertNull(response.turmaId());
         assertTrue(response.responsaveis().isEmpty());
+    }
+
+    @Test
+    void deveIncluirTurmaNaResponseQuandoAlunoEstaMatriculado() {
+        Aluno aluno = new Aluno("id1", "Carlos", 20, "Matematica", "Noite", true);
+        aluno.setTurmaId("turma1");
+
+        assertEquals("turma1", AlunoResponse.fromEntity(aluno).turmaId());
     }
 }

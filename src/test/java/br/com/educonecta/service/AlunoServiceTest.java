@@ -1,5 +1,6 @@
 package br.com.educonecta.service;
 
+import br.com.educonecta.exception.ConflitoException;
 import br.com.educonecta.exception.RecursoNaoEncontradoException;
 import br.com.educonecta.model.Aluno;
 import br.com.educonecta.model.Responsavel;
@@ -140,6 +141,55 @@ class AlunoServiceTest {
         assertThrows(IllegalArgumentException.class, () -> service.atualizar("id1", novosDados));
         assertEquals(1, existente.getResponsaveis().size());
         verify(repository, never()).atualizar(any());
+    }
+
+    @Test
+    void naoDevePermitirAlterarDisciplinaDeAlunoMatriculadoEmTurma() {
+        Aluno existente = new Aluno("id1", "Maria", 20, "Matematica", "Tarde", true);
+        existente.setTurmaId("turma1");
+        Aluno novosDados = new Aluno("Maria", 20, "Portugues", "Tarde");
+        when(repository.buscarPorId("id1")).thenReturn(existente);
+
+        ConflitoException erro = assertThrows(ConflitoException.class, () -> service.atualizar("id1", novosDados));
+        assertTrue(erro.getMessage().contains("Desmatricule"));
+        assertEquals("Matematica", existente.getCurso());
+        verify(repository, never()).atualizar(any());
+    }
+
+    @Test
+    void devePermitirAtualizarAlunoMatriculadoSemMudarDisciplinaEMantendoATurma() {
+        Aluno existente = new Aluno("id1", "Maria", 20, "Matematica", "Tarde", true);
+        existente.setTurmaId("turma1");
+        Aluno novosDados = new Aluno("Maria Souza", 20, "matematica", "Noite");
+        when(repository.buscarPorId("id1")).thenReturn(existente);
+
+        Aluno resultado = service.atualizar("id1", novosDados);
+
+        assertEquals("Maria Souza", resultado.getNome());
+        assertEquals("turma1", resultado.getTurmaId());
+    }
+
+    @Test
+    void deveAlterarTurmaDoAlunoEPersistir() {
+        Aluno aluno = new Aluno("id1", "Maria", 10, "Matematica", "Tarde", true);
+
+        Aluno resultado = service.alterarTurma(aluno, "turma1");
+
+        assertEquals("turma1", resultado.getTurmaId());
+        verify(repository).atualizar(aluno);
+
+        service.alterarTurma(aluno, null);
+        assertNull(aluno.getTurmaId());
+    }
+
+    @Test
+    void deveListarEContarAlunosPorTurma() {
+        Aluno aluno = new Aluno("id1", "Maria", 10, "Matematica", "Tarde", true);
+        when(repository.listarPorTurma("turma1")).thenReturn(List.of(aluno));
+        when(repository.contarPorTurma("turma1")).thenReturn(1L);
+
+        assertEquals(List.of(aluno), service.listarPorTurma("turma1"));
+        assertEquals(1L, service.contarPorTurma("turma1"));
     }
 
     @Test

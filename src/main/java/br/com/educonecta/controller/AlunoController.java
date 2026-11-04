@@ -16,7 +16,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/alunos")
-@Tag(name = "Alunos", description = "Cadastro de alunos do programa de reforco escolar (ODS 4)")
+@Tag(name = "Alunos", description = "Cadastro de alunos, com endereco (subdocumento) e responsaveis (lista de subdocumentos)")
 public class AlunoController {
 
     private final AlunoService service;

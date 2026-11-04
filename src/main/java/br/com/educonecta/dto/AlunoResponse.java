@@ -19,6 +19,9 @@ public record AlunoResponse(
         String turno,
         @Schema(description = "Indica se a matricula do aluno esta ativa", example = "true")
         boolean ativo,
+        @Schema(description = "Id da turma em que o aluno esta matriculado (nulo se nao matriculado)",
+                example = "6512f1a2b3c4d5e6f7a8b9c2")
+        String turmaId,
         @Schema(description = "Endereco do aluno (nulo se nao informado)")
         EnderecoDto endereco,
         @Schema(description = "Responsaveis pelo aluno")
@@ -32,6 +35,7 @@ public record AlunoResponse(
                 aluno.getCurso(),
                 aluno.getTurno(),
                 aluno.isAtivo(),
+                aluno.getTurmaId(),
                 EnderecoDto.fromEntity(aluno.getEndereco()),
                 aluno.getResponsaveis().stream().map(ResponsavelDto::fromEntity).toList());
     }

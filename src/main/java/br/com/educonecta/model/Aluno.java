@@ -19,6 +19,7 @@ public class Aluno extends Entidade {
     private boolean ativo;
     private Endereco endereco;
     private List<Responsavel> responsaveis = List.of();
+    private String turmaId;
 
     public Aluno(String nome, int idade, String curso, String turno) {
         this(null, nome, idade, curso, turno, true);
@@ -99,6 +100,14 @@ public class Aluno extends Entidade {
         this.responsaveis = List.copyOf(responsaveis);
     }
 
+    public String getTurmaId() {
+        return turmaId;
+    }
+
+    public void setTurmaId(String turmaId) {
+        this.turmaId = turmaId;
+    }
+
     public boolean isMenorDeIdade() {
         return idade < MAIORIDADE;
     }
@@ -124,6 +133,7 @@ public class Aluno extends Entidade {
                 ", ativo=" + ativo +
                 ", endereco=" + endereco +
                 ", responsaveis=" + responsaveis +
+                ", turmaId='" + turmaId + '\'' +
                 '}';
     }
 }

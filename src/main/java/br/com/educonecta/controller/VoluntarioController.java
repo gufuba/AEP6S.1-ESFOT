@@ -16,7 +16,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/voluntarios")
-@Tag(name = "Voluntarios", description = "Professores voluntarios que conduzem as turmas de reforco")
+@Tag(name = "Voluntarios", description = "Professores voluntarios e as disciplinas que lecionam")
 public class VoluntarioController {
 
     private final VoluntarioService service;

@@ -150,6 +150,18 @@ class AlunoTest {
     }
 
     @Test
+    void deveGuardarTurmaEPreservarlaAoAtualizarDados() {
+        Aluno existente = new Aluno("id1", "Maria", 10, "Matematica", "Tarde", true);
+        existente.setTurmaId("turma1");
+        assertNull(new Aluno("Maria", 10, "Matematica", "Tarde").getTurmaId());
+
+        existente.atualizarDados(new Aluno("Maria Souza", 10, "Matematica", "Tarde"));
+
+        assertEquals("turma1", existente.getTurmaId());
+        assertTrue(existente.toString().contains("turma1"));
+    }
+
+    @Test
     void deveIdentificarMenorDeIdade() {
         assertTrue(new Aluno("Maria", 17, "Matematica", "Tarde").isMenorDeIdade());
         assertFalse(new Aluno("Maria", 18, "Matematica", "Tarde").isMenorDeIdade());

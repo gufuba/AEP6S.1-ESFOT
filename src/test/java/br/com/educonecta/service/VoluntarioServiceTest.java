@@ -3,6 +3,7 @@ package br.com.educonecta.service;
 import br.com.educonecta.exception.ConflitoException;
 import br.com.educonecta.exception.RecursoNaoEncontradoException;
 import br.com.educonecta.model.Voluntario;
+import br.com.educonecta.repository.TurmaRepository;
 import br.com.educonecta.repository.VoluntarioRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,11 +22,14 @@ class VoluntarioServiceTest {
     @Mock
     private VoluntarioRepository repository;
 
+    @Mock
+    private TurmaRepository turmaRepository;
+
     private VoluntarioService service;
 
     @BeforeEach
     void setUp() {
-        service = new VoluntarioService(repository);
+        service = new VoluntarioService(repository, turmaRepository);
     }
 
     private static Voluntario voluntario(String email) {
@@ -119,16 +123,29 @@ class VoluntarioServiceTest {
     }
 
     @Test
-    void deveRemoverVoluntarioExistente() {
-        when(repository.remover("id1")).thenReturn(true);
+    void deveRemoverVoluntarioSemTurmas() {
+        when(repository.buscarPorId("id1")).thenReturn(voluntario("carlos@email.com"));
+        when(turmaRepository.existePorVoluntario("id1")).thenReturn(false);
 
         assertDoesNotThrow(() -> service.remover("id1"));
+        verify(repository).remover("id1");
+    }
+
+    @Test
+    void naoDeveRemoverVoluntarioComTurmasVinculadas() {
+        when(repository.buscarPorId("id1")).thenReturn(voluntario("carlos@email.com"));
+        when(turmaRepository.existePorVoluntario("id1")).thenReturn(true);
+
+        ConflitoException erro = assertThrows(ConflitoException.class, () -> service.remover("id1"));
+        assertTrue(erro.getMessage().contains("turmas"));
+        verify(repository, never()).remover(any());
     }
 
     @Test
     void naoDeveRemoverVoluntarioInexistente() {
-        when(repository.remover("x")).thenReturn(false);
+        when(repository.buscarPorId("x")).thenReturn(null);
 
         assertThrows(RecursoNaoEncontradoException.class, () -> service.remover("x"));
+        verifyNoInteractions(turmaRepository);
     }
 }

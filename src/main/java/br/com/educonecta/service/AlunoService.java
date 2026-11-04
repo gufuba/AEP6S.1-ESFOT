@@ -1,5 +1,6 @@
 package br.com.educonecta.service;
 
+import br.com.educonecta.exception.ConflitoException;
 import br.com.educonecta.exception.RecursoNaoEncontradoException;
 import br.com.educonecta.model.Aluno;
 import br.com.educonecta.repository.AlunoRepository;
@@ -41,6 +42,9 @@ public class AlunoService {
     public Aluno atualizar(String id, Aluno novosDados) {
         Aluno existente = buscarPorId(id);
         validarRegras(novosDados);
+        if (existente.getTurmaId() != null && !existente.getCurso().equalsIgnoreCase(novosDados.getCurso())) {
+            throw new ConflitoException("Desmatricule o aluno da turma antes de alterar a disciplina.");
+        }
         existente.atualizarDados(novosDados);
         repository.atualizar(existente);
         return existente;
@@ -50,6 +54,20 @@ public class AlunoService {
         if (!repository.remover(id)) {
             throw new RecursoNaoEncontradoException("Aluno", id);
         }
+    }
+
+    public Aluno alterarTurma(Aluno aluno, String turmaId) {
+        aluno.setTurmaId(turmaId);
+        repository.atualizar(aluno);
+        return aluno;
+    }
+
+    public List<Aluno> listarPorTurma(String turmaId) {
+        return repository.listarPorTurma(turmaId);
+    }
+
+    public long contarPorTurma(String turmaId) {
+        return repository.contarPorTurma(turmaId);
     }
 
     private void validarRegras(Aluno aluno) {

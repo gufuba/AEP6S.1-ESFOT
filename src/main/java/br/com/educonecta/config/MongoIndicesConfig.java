@@ -1,5 +1,7 @@
 package br.com.educonecta.config;
 
+import br.com.educonecta.repository.AlunoRepository;
+import br.com.educonecta.repository.TurmaRepository;
 import br.com.educonecta.repository.VoluntarioRepository;
 import com.mongodb.MongoException;
 import com.mongodb.client.MongoDatabase;
@@ -13,8 +15,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Cria os indices do MongoDB na inicializacao. Uma falha (ex.: banco fora do ar ou
- * dados antigos duplicados) apenas gera um aviso e nao impede a API de subir.
+ * Cria os indices do MongoDB na inicializacao: e-mail unico em voluntarios e indices
+ * nos campos de referencia usados nas consultas de relacionamento. Uma falha (ex.: banco
+ * fora do ar ou dados antigos duplicados) apenas gera um aviso e nao impede a API de subir.
  */
 @Configuration
 public class MongoIndicesConfig {
@@ -23,8 +26,12 @@ public class MongoIndicesConfig {
 
     @Bean
     public ApplicationRunner criarIndices(MongoDatabase database) {
-        return args -> criarIndice(database, VoluntarioRepository.COLECAO,
-                Indexes.ascending("email"), new IndexOptions().unique(true));
+        return args -> {
+            criarIndice(database, VoluntarioRepository.COLECAO, Indexes.ascending("email"),
+                    new IndexOptions().unique(true));
+            criarIndice(database, TurmaRepository.COLECAO, Indexes.ascending("voluntarioId"), new IndexOptions());
+            criarIndice(database, AlunoRepository.COLECAO, Indexes.ascending("turmaId"), new IndexOptions());
+        };
     }
 
     private void criarIndice(MongoDatabase database, String colecao, Bson chaves, IndexOptions opcoes) {

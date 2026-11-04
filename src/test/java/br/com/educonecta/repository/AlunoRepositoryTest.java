@@ -131,6 +131,68 @@ class AlunoRepositoryTest {
     }
 
     @Test
+    void deveGravarTurmaComoReferenciaObjectId() {
+        ObjectId turmaId = new ObjectId();
+        Aluno aluno = new Aluno("Carlos", 20, "Matematica", "Noite");
+        aluno.setTurmaId(turmaId.toHexString());
+        doAnswer(invocation -> {
+            ((Document) invocation.getArgument(0)).put("_id", new ObjectId());
+            return null;
+        }).when(collection).insertOne(any(Document.class));
+
+        repository.inserir(aluno);
+
+        verify(collection).insertOne(argThat(doc -> turmaId.equals(doc.get("turmaId"))));
+    }
+
+    @Test
+    void deveLerTurmaDoDocumento() {
+        ObjectId id = new ObjectId();
+        ObjectId turmaId = new ObjectId();
+        when(collection.find(any(Document.class))).thenReturn(findIterable);
+        when(findIterable.first()).thenReturn(
+                documentoDeAluno(id, "Maria", 10, "Matematica", "Tarde").append("turmaId", turmaId));
+
+        Aluno resultado = repository.buscarPorId(id.toHexString());
+
+        assertEquals(turmaId.toHexString(), resultado.getTurmaId());
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void deveListarAlunosDeUmaTurma() {
+        ObjectId turmaId = new ObjectId();
+        Document doc = documentoDeAluno(new ObjectId(), "Maria", 10, "Matematica", "Tarde").append("turmaId", turmaId);
+        MongoCursor<Document> cursor = mock(MongoCursor.class);
+        Iterator<Document> iterator = List.of(doc).iterator();
+        when(cursor.hasNext()).thenAnswer(inv -> iterator.hasNext());
+        when(cursor.next()).thenAnswer(inv -> iterator.next());
+        when(collection.find(any(Document.class))).thenReturn(findIterable);
+        when(findIterable.iterator()).thenReturn(cursor);
+
+        List<Aluno> alunos = repository.listarPorTurma(turmaId.toHexString());
+
+        assertEquals(1, alunos.size());
+        assertEquals(turmaId.toHexString(), alunos.get(0).getTurmaId());
+        verify(collection).find(argThat((Document filtro) -> turmaId.equals(filtro.get("turmaId"))));
+    }
+
+    @Test
+    void deveContarAlunosDeUmaTurma() {
+        ObjectId turmaId = new ObjectId();
+        when(collection.countDocuments(any(Document.class))).thenReturn(7L);
+
+        assertEquals(7L, repository.contarPorTurma(turmaId.toHexString()));
+        verify(collection).countDocuments(argThat((Document filtro) -> turmaId.equals(filtro.get("turmaId"))));
+    }
+
+    @Test
+    void deveRejeitarIdDeTurmaInvalidoNasConsultas() {
+        assertThrows(IllegalArgumentException.class, () -> repository.listarPorTurma("invalido"));
+        assertThrows(IllegalArgumentException.class, () -> repository.contarPorTurma("invalido"));
+    }
+
+    @Test
     void deveLerDocumentoAntigoSemCamposAninhados() {
         ObjectId objectId = new ObjectId();
         when(collection.find(any(Document.class))).thenReturn(findIterable);
