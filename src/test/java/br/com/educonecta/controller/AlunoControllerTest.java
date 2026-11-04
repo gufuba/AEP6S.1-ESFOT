@@ -1,9 +1,13 @@
 package br.com.educonecta.controller;
 
 import br.com.educonecta.dto.AlunoRequest;
+import br.com.educonecta.dto.EnderecoDto;
+import br.com.educonecta.dto.ResponsavelDto;
 import br.com.educonecta.exception.ApiExceptionHandler;
 import br.com.educonecta.exception.RecursoNaoEncontradoException;
 import br.com.educonecta.model.Aluno;
+import br.com.educonecta.model.Endereco;
+import br.com.educonecta.model.Responsavel;
 import br.com.educonecta.service.AlunoService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,9 +46,14 @@ class AlunoControllerTest {
                 .build();
     }
 
+    private static AlunoRequest requestComResponsavel(String nome, int idade, String curso, String turno) {
+        return new AlunoRequest(nome, idade, curso, turno, null, null,
+                List.of(new ResponsavelDto("Ana Souza", "Mae", "44999991234")));
+    }
+
     @Test
     void deveCadastrarAlunoERetornar201() throws Exception {
-        AlunoRequest request = new AlunoRequest("Maria", 10, "Matematica", "Tarde");
+        AlunoRequest request = requestComResponsavel("Maria", 10, "Matematica", "Tarde");
         when(service.cadastrar(any(Aluno.class)))
                 .thenReturn(new Aluno("id1", "Maria", 10, "Matematica", "Tarde", true));
 
@@ -55,6 +64,45 @@ class AlunoControllerTest {
                 .andExpect(jsonPath("$.id").value("id1"))
                 .andExpect(jsonPath("$.nome").value("Maria"))
                 .andExpect(jsonPath("$.ativo").value(true));
+    }
+
+    @Test
+    void deveEnviarEnderecoEResponsaveisAoServicoEDevolverNaResposta() throws Exception {
+        AlunoRequest request = new AlunoRequest("Maria", 10, "Matematica", "Tarde", true,
+                new EnderecoDto("Rua A, 10", "Centro", "Maringa", "PR"),
+                List.of(new ResponsavelDto("Ana Souza", "Mae", "(44) 99999-1234")));
+        Aluno salvo = new Aluno("id1", "Maria", 10, "Matematica", "Tarde", true);
+        salvo.setEndereco(new Endereco("Rua A, 10", "Centro", "Maringa", "PR"));
+        salvo.setResponsaveis(List.of(new Responsavel("Ana Souza", "Mae", "44999991234")));
+        when(service.cadastrar(any(Aluno.class))).thenReturn(salvo);
+
+        mockMvc.perform(post("/api/alunos")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.endereco.cidade").value("Maringa"))
+                .andExpect(jsonPath("$.responsaveis[0].nome").value("Ana Souza"))
+                .andExpect(jsonPath("$.responsaveis[0].telefone").value("44999991234"));
+
+        verify(service).cadastrar(argThat(aluno ->
+                aluno.getEndereco() != null
+                        && "Maringa".equals(aluno.getEndereco().cidade())
+                        && aluno.getResponsaveis().size() == 1
+                        && "44999991234".equals(aluno.getResponsaveis().get(0).telefone())));
+    }
+
+    @Test
+    void deveRetornar400QuandoUmSubdocumentoForInvalido() throws Exception {
+        AlunoRequest request = new AlunoRequest("Maria", 10, "Matematica", "Tarde", null, null,
+                List.of(new ResponsavelDto("Ana Souza", "Mae", "123")));
+
+        mockMvc.perform(post("/api/alunos")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensagem").value("Telefone do responsavel deve ter 10 ou 11 digitos (DDD + numero)."));
+
+        verifyNoInteractions(service);
     }
 
     @Test
@@ -70,7 +118,7 @@ class AlunoControllerTest {
 
     @Test
     void deveRetornar400QuandoServicoRejeitarOCadastro() throws Exception {
-        AlunoRequest request = new AlunoRequest("Bebe", 3, "Matematica", "Tarde");
+        AlunoRequest request = requestComResponsavel("Bebe", 3, "Matematica", "Tarde");
         when(service.cadastrar(any(Aluno.class)))
                 .thenThrow(new IllegalArgumentException("Aluno deve ter no minimo 6 anos para ingressar no programa."));
 
@@ -114,7 +162,7 @@ class AlunoControllerTest {
 
     @Test
     void deveAtualizarAlunoExistente() throws Exception {
-        AlunoRequest request = new AlunoRequest("Maria Silva", 11, "Portugues", "Manha");
+        AlunoRequest request = requestComResponsavel("Maria Silva", 11, "Portugues", "Manha");
         when(service.atualizar(eq("id1"), any(Aluno.class)))
                 .thenReturn(new Aluno("id1", "Maria Silva", 11, "Portugues", "Manha", true));
 

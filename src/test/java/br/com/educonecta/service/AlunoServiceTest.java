@@ -2,6 +2,7 @@ package br.com.educonecta.service;
 
 import br.com.educonecta.exception.RecursoNaoEncontradoException;
 import br.com.educonecta.model.Aluno;
+import br.com.educonecta.model.Responsavel;
 import br.com.educonecta.repository.AlunoRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,9 +28,15 @@ class AlunoServiceTest {
         service = new AlunoService(repository);
     }
 
+    private static Aluno alunoComResponsavel(String nome, int idade, String curso, String turno) {
+        Aluno aluno = new Aluno(nome, idade, curso, turno);
+        aluno.setResponsaveis(List.of(new Responsavel("Ana Souza", "Mae", "44999991234")));
+        return aluno;
+    }
+
     @Test
     void deveCadastrarAlunoComIdadeValida() {
-        Aluno aluno = new Aluno("Maria", 10, "Matematica", "Tarde");
+        Aluno aluno = alunoComResponsavel("Maria", 10, "Matematica", "Tarde");
         when(repository.inserir(aluno)).thenReturn(aluno);
 
         assertSame(aluno, service.cadastrar(aluno));
@@ -38,10 +45,27 @@ class AlunoServiceTest {
 
     @Test
     void naoDeveCadastrarAlunoAbaixoDaIdadeMinima() {
-        Aluno aluno = new Aluno("Bebe", 3, "Matematica", "Tarde");
+        Aluno aluno = alunoComResponsavel("Bebe", 3, "Matematica", "Tarde");
 
         assertThrows(IllegalArgumentException.class, () -> service.cadastrar(aluno));
         verify(repository, never()).inserir(any());
+    }
+
+    @Test
+    void naoDeveCadastrarMenorDeIdadeSemResponsavel() {
+        Aluno aluno = new Aluno("Maria", 10, "Matematica", "Tarde");
+
+        IllegalArgumentException erro = assertThrows(IllegalArgumentException.class, () -> service.cadastrar(aluno));
+        assertTrue(erro.getMessage().contains("responsavel"));
+        verify(repository, never()).inserir(any());
+    }
+
+    @Test
+    void deveCadastrarMaiorDeIdadeSemResponsavel() {
+        Aluno aluno = new Aluno("Carlos", 20, "Matematica", "Noite");
+        when(repository.inserir(aluno)).thenReturn(aluno);
+
+        assertSame(aluno, service.cadastrar(aluno));
     }
 
     @Test
@@ -73,7 +97,7 @@ class AlunoServiceTest {
     @Test
     void deveAtualizarAlunoExistenteBuscandoUmaUnicaVez() {
         Aluno existente = new Aluno("id1", "Maria", 10, "Matematica", "Tarde", true);
-        Aluno novosDados = new Aluno("Maria Silva", 11, "Portugues", "Manha");
+        Aluno novosDados = alunoComResponsavel("Maria Silva", 11, "Portugues", "Manha");
         when(repository.buscarPorId("id1")).thenReturn(existente);
 
         Aluno resultado = service.atualizar("id1", novosDados);
@@ -81,6 +105,7 @@ class AlunoServiceTest {
         assertEquals("id1", resultado.getId());
         assertEquals("Maria Silva", resultado.getNome());
         assertEquals("Portugues", resultado.getCurso());
+        assertEquals(1, resultado.getResponsaveis().size());
         verify(repository, times(1)).buscarPorId("id1");
         verify(repository).atualizar(existente);
     }
@@ -88,7 +113,7 @@ class AlunoServiceTest {
     @Test
     void naoDeveAtualizarAlunoInexistente() {
         when(repository.buscarPorId("idInexistente")).thenReturn(null);
-        Aluno novosDados = new Aluno("Maria", 10, "Matematica", "Tarde");
+        Aluno novosDados = alunoComResponsavel("Maria", 10, "Matematica", "Tarde");
 
         assertThrows(RecursoNaoEncontradoException.class, () -> service.atualizar("idInexistente", novosDados));
         verify(repository, never()).atualizar(any());
@@ -97,11 +122,23 @@ class AlunoServiceTest {
     @Test
     void naoDevePermitirReduzirIdadeAbaixoDoMinimoNaAtualizacao() {
         Aluno existente = new Aluno("id1", "Maria", 10, "Matematica", "Tarde", true);
-        Aluno novosDados = new Aluno("Maria", 3, "Matematica", "Tarde");
+        Aluno novosDados = alunoComResponsavel("Maria", 3, "Matematica", "Tarde");
         when(repository.buscarPorId("id1")).thenReturn(existente);
 
         assertThrows(IllegalArgumentException.class, () -> service.atualizar("id1", novosDados));
         assertEquals(10, existente.getIdade());
+        verify(repository, never()).atualizar(any());
+    }
+
+    @Test
+    void naoDevePermitirRemoverTodosOsResponsaveisDeUmMenorNaAtualizacao() {
+        Aluno existente = alunoComResponsavel("Maria", 10, "Matematica", "Tarde");
+        existente.setId("id1");
+        Aluno novosDados = new Aluno("Maria", 10, "Matematica", "Tarde");
+        when(repository.buscarPorId("id1")).thenReturn(existente);
+
+        assertThrows(IllegalArgumentException.class, () -> service.atualizar("id1", novosDados));
+        assertEquals(1, existente.getResponsaveis().size());
         verify(repository, never()).atualizar(any());
     }
 

@@ -57,5 +57,9 @@ public class AlunoService {
             throw new IllegalArgumentException(
                     "Aluno deve ter no minimo " + IDADE_MINIMA_PROGRAMA + " anos para ingressar no programa.");
         }
+        if (aluno.isMenorDeIdade() && aluno.getResponsaveis().isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Aluno menor de " + Aluno.MAIORIDADE + " anos deve ter ao menos um responsavel.");
+        }
     }
 }

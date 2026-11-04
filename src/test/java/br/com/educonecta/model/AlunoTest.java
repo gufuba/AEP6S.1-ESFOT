@@ -2,6 +2,9 @@ package br.com.educonecta.model;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class AlunoTest {
@@ -91,6 +94,78 @@ class AlunoTest {
         assertEquals("Portugues", existente.getCurso());
         assertEquals("Manha", existente.getTurno());
         assertFalse(existente.isAtivo());
+    }
+
+    @Test
+    void deveIniciarSemEnderecoENemResponsaveis() {
+        Aluno aluno = new Aluno("Maria", 10, "Matematica", "Tarde");
+
+        assertNull(aluno.getEndereco());
+        assertTrue(aluno.getResponsaveis().isEmpty());
+    }
+
+    @Test
+    void deveGuardarEnderecoEResponsaveis() {
+        Aluno aluno = new Aluno("Maria", 10, "Matematica", "Tarde");
+        Endereco endereco = new Endereco("Rua A", "Centro", "Maringa", "PR");
+        Responsavel mae = new Responsavel("Ana", "Mae", "44999991234");
+
+        aluno.setEndereco(endereco);
+        aluno.setResponsaveis(List.of(mae));
+
+        assertEquals(endereco, aluno.getEndereco());
+        assertEquals(List.of(mae), aluno.getResponsaveis());
+    }
+
+    @Test
+    void deveTratarListaNulaDeResponsaveisComoVazia() {
+        Aluno aluno = new Aluno("Maria", 10, "Matematica", "Tarde");
+        aluno.setResponsaveis(List.of(new Responsavel("Ana", "Mae", "44999991234")));
+
+        aluno.setResponsaveis(null);
+
+        assertTrue(aluno.getResponsaveis().isEmpty());
+    }
+
+    @Test
+    void naoDevePermitirResponsavelNuloNaLista() {
+        Aluno aluno = new Aluno("Maria", 10, "Matematica", "Tarde");
+        List<Responsavel> comNulo = new ArrayList<>();
+        comNulo.add(null);
+
+        assertThrows(IllegalArgumentException.class, () -> aluno.setResponsaveis(comNulo));
+    }
+
+    @Test
+    void deveProtegerListaDeResponsaveisContraAlteracaoExterna() {
+        Aluno aluno = new Aluno("Maria", 10, "Matematica", "Tarde");
+        List<Responsavel> original = new ArrayList<>(List.of(new Responsavel("Ana", "Mae", "44999991234")));
+        aluno.setResponsaveis(original);
+
+        original.add(new Responsavel("Jose", "Pai", "44988887777"));
+
+        assertEquals(1, aluno.getResponsaveis().size());
+        assertThrows(UnsupportedOperationException.class,
+                () -> aluno.getResponsaveis().add(new Responsavel("Jose", "Pai", "44988887777")));
+    }
+
+    @Test
+    void deveIdentificarMenorDeIdade() {
+        assertTrue(new Aluno("Maria", 17, "Matematica", "Tarde").isMenorDeIdade());
+        assertFalse(new Aluno("Maria", 18, "Matematica", "Tarde").isMenorDeIdade());
+    }
+
+    @Test
+    void deveCopiarEnderecoEResponsaveisAoAtualizarDados() {
+        Aluno existente = new Aluno("id1", "Maria", 10, "Matematica", "Tarde", true);
+        Aluno novosDados = new Aluno("Maria", 10, "Matematica", "Tarde");
+        novosDados.setEndereco(new Endereco("Rua B", "Vila", "Sarandi", "PR"));
+        novosDados.setResponsaveis(List.of(new Responsavel("Ana", "Mae", "44999991234")));
+
+        existente.atualizarDados(novosDados);
+
+        assertEquals("Sarandi", existente.getEndereco().cidade());
+        assertEquals(1, existente.getResponsaveis().size());
     }
 
     @Test

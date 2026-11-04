@@ -1,6 +1,8 @@
 package br.com.educonecta.repository;
 
 import br.com.educonecta.model.Aluno;
+import br.com.educonecta.model.Endereco;
+import br.com.educonecta.model.Responsavel;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
@@ -68,6 +70,76 @@ class AlunoRepositoryTest {
                         && "Matematica".equals(doc.getString("curso"))
                         && "Tarde".equals(doc.getString("turno"))
                         && Boolean.TRUE.equals(doc.getBoolean("ativo"))));
+    }
+
+    @Test
+    void deveGravarEnderecoComoSubdocumentoEResponsaveisComoListaDeSubdocumentos() {
+        Aluno aluno = new Aluno("Maria", 10, "Matematica", "Tarde");
+        aluno.setEndereco(new Endereco("Rua A", "Centro", "Maringa", "PR"));
+        aluno.setResponsaveis(List.of(
+                new Responsavel("Ana", "Mae", "44999991234"),
+                new Responsavel("Jose", "Pai", "44988887777")));
+        doAnswer(invocation -> {
+            ((Document) invocation.getArgument(0)).put("_id", new ObjectId());
+            return null;
+        }).when(collection).insertOne(any(Document.class));
+
+        repository.inserir(aluno);
+
+        verify(collection).insertOne(argThat(doc -> {
+            Document endereco = doc.get("endereco", Document.class);
+            List<Document> responsaveis = doc.getList("responsaveis", Document.class);
+            return endereco != null
+                    && "Maringa".equals(endereco.getString("cidade"))
+                    && "PR".equals(endereco.getString("estado"))
+                    && responsaveis.size() == 2
+                    && "Ana".equals(responsaveis.get(0).getString("nome"))
+                    && "44988887777".equals(responsaveis.get(1).getString("telefone"));
+        }));
+    }
+
+    @Test
+    void naoDeveGravarCampoEnderecoQuandoAlunoNaoTemEndereco() {
+        Aluno aluno = new Aluno("Maria", 20, "Matematica", "Tarde");
+        doAnswer(invocation -> {
+            ((Document) invocation.getArgument(0)).put("_id", new ObjectId());
+            return null;
+        }).when(collection).insertOne(any(Document.class));
+
+        repository.inserir(aluno);
+
+        verify(collection).insertOne(argThat(doc ->
+                !doc.containsKey("endereco") && doc.getList("responsaveis", Document.class).isEmpty()));
+    }
+
+    @Test
+    void deveLerSubdocumentosAoBuscarAluno() {
+        ObjectId objectId = new ObjectId();
+        Document document = documentoDeAluno(objectId, "Maria", 10, "Matematica", "Tarde")
+                .append("endereco", new Document("rua", "Rua A").append("bairro", "Centro")
+                        .append("cidade", "Maringa").append("estado", "PR"))
+                .append("responsaveis", List.of(
+                        new Document("nome", "Ana").append("parentesco", "Mae").append("telefone", "44999991234")));
+        when(collection.find(any(Document.class))).thenReturn(findIterable);
+        when(findIterable.first()).thenReturn(document);
+
+        Aluno resultado = repository.buscarPorId(objectId.toHexString());
+
+        assertEquals("Maringa", resultado.getEndereco().cidade());
+        assertEquals(1, resultado.getResponsaveis().size());
+        assertEquals("Mae", resultado.getResponsaveis().get(0).parentesco());
+    }
+
+    @Test
+    void deveLerDocumentoAntigoSemCamposAninhados() {
+        ObjectId objectId = new ObjectId();
+        when(collection.find(any(Document.class))).thenReturn(findIterable);
+        when(findIterable.first()).thenReturn(documentoDeAluno(objectId, "Maria", 10, "Matematica", "Tarde"));
+
+        Aluno resultado = repository.buscarPorId(objectId.toHexString());
+
+        assertNull(resultado.getEndereco());
+        assertTrue(resultado.getResponsaveis().isEmpty());
     }
 
     @Test
