@@ -76,14 +76,6 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>${jacoco.version}</version>
-                <configuration>
-                    <excludes>
-                        <!-- Bootstrap do Spring Boot e configuracao de infraestrutura,
-                             sem regra de negocio propria -->
-                        <exclude>br/com/educonecta/EduConectaApplication.class</exclude>
-                        <exclude>br/com/educonecta/config/**</exclude>
-                    </excludes>
-                </configuration>
                 <executions>
                     <execution>
                         <id>prepare-agent</id>
