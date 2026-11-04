@@ -63,6 +63,17 @@ class TurmaControllerTest {
     }
 
     @Test
+    void deveManterTurmaAtivaQuandoInformadaComoTrue() throws Exception {
+        when(service.cadastrar(any(Turma.class))).thenReturn(salva());
+
+        mockMvc.perform(post("/api/turmas").contentType("application/json")
+                        .content(corpo(new TurmaRequest("T", "Matematica", "Tarde", 10, "vol1", true))))
+                .andExpect(status().isCreated());
+
+        verify(service).cadastrar(argThat(Turma::isAtiva));
+    }
+
+    @Test
     void deveRetornar400QuandoVagasNaoForInformada() throws Exception {
         mockMvc.perform(post("/api/turmas").contentType("application/json")
                         .content("{\"nome\":\"T\",\"disciplina\":\"Matematica\",\"turno\":\"Tarde\",\"voluntarioId\":\"vol1\"}"))

@@ -63,6 +63,18 @@ class VoluntarioControllerTest {
     }
 
     @Test
+    void deveManterVoluntarioAtivoQuandoInformadoComoTrue() throws Exception {
+        when(service.cadastrar(any(Voluntario.class))).thenReturn(salvo());
+
+        mockMvc.perform(post("/api/voluntarios").contentType("application/json")
+                        .content(corpo(new VoluntarioRequest("Carlos", "carlos@email.com",
+                                List.of("Matematica"), true))))
+                .andExpect(status().isCreated());
+
+        verify(service).cadastrar(argThat(Voluntario::isAtivo));
+    }
+
+    @Test
     void deveRetornar400QuandoEmailForInvalido() throws Exception {
         mockMvc.perform(post("/api/voluntarios").contentType("application/json")
                         .content(corpo(new VoluntarioRequest("Carlos", "sem-arroba", List.of("Matematica"), null))))

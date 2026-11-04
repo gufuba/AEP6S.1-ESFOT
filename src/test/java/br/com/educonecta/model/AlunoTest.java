@@ -199,10 +199,29 @@ class AlunoTest {
 
     @Test
     void alunoNuncaEIgualANullNemAOutroTipo() {
-        Aluno aluno = new Aluno("Maria", 10, "Matematica", "Tarde");
+        Aluno aluno = new Aluno("id1", "Maria", 10, "Matematica", "Tarde", true);
 
-        assertNotEquals(null, aluno);
-        assertNotEquals("texto", aluno);
+        assertFalse(aluno.equals(null));
+        assertFalse(aluno.equals("texto"));
+    }
+
+    @Test
+    void alunosComIdsDiferentesOuApenasUmComIdNaoSaoIguais() {
+        Aluno a1 = new Aluno("id1", "Maria", 10, "Matematica", "Tarde", true);
+        Aluno a2 = new Aluno("id2", "Maria", 10, "Matematica", "Tarde", true);
+        Aluno semId = new Aluno("Maria", 10, "Matematica", "Tarde");
+
+        assertNotEquals(a1, a2);
+        assertNotEquals(a1, semId);
+        assertNotEquals(semId, a1);
+    }
+
+    @Test
+    void entidadesDeTiposDiferentesNaoSaoIguaisMesmoComIdIgual() {
+        Aluno aluno = new Aluno("id1", "Maria", 10, "Matematica", "Tarde", true);
+        Turma turma = new Turma("id1", "Turma", "Matematica", "Tarde", 10, "vol1", true);
+
+        assertNotEquals(aluno, turma);
     }
 
     @Test
