@@ -121,8 +121,9 @@ Para validar o fluxo completo contra um MongoDB real, há o script
 
 - [Documentação técnica](docs/DOCUMENTACAO_TECNICA.md): arquitetura, estrutura do banco, regras de
   negócio, API, instalação, execução e testes.
-- [Quadro de tarefas](docs/QUADRO_DE_TAREFAS.md): metodologia (Kanban) e cartões com os commits
-  correspondentes.
+- [Quadro de tarefas](https://github.com/users/gufuba/projects/1) (GitHub Projects, Kanban); o
+  registro dele, com a definição de pronto e os commits de cada cartão, está em
+  [docs/QUADRO_DE_TAREFAS.md](docs/QUADRO_DE_TAREFAS.md).
 
 ## 8. Versão desta Entrega
 

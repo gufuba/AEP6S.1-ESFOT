@@ -1,8 +1,12 @@
 # EduConecta — Quadro de Tarefas (Kanban)
 
+**Quadro online:** [EduConecta - Quadro de Tarefas (GitHub Projects)](https://github.com/users/gufuba/projects/1)
+
 Metodologia de trabalho: **Kanban simplificado**, com o trabalho dividido em cartões pequenos e
 verificáveis que percorrem as colunas **A fazer → Em andamento → Concluído**. Cada cartão concluído
 aponta para o commit que o entregou, de modo que o quadro e o histórico do Git se confirmam.
+O quadro online traz os mesmos cartões, com o responsável (Fernando, Gustavo ou Vitor) e a entrega
+(1ª ou 2ª); este documento é o registro dele no repositório.
 
 **Definição de pronto** (um cartão só vai para *Concluído* quando):
 
@@ -16,7 +20,6 @@ aponta para o commit que o entregou, de modo que o quadro e o histórico do Git 
 
 | Cartão | Descrição |
 |---|---|
-| T-16 | Publicar a versão final: enviar os commits ao GitHub e criar a tag `entrega-2` |
 | T-17 | Gravar o vídeo de demonstração (3 a 5 minutos): evolução, arquitetura final, execução, tecnologias, testes e resultados |
 | T-18 | Publicar o vídeo no YouTube e preencher o modelo de entrega (links do vídeo e do GitHub) |
 
@@ -48,8 +51,9 @@ aponta para o commit que o entregou, de modo que o quadro e o histórico do Git 
 | T-11 | Medir a cobertura sobre todo o código e testar configuração e contexto Spring (teste de integração) | `380516a` |
 | T-12 | Validar o fluxo completo contra um MongoDB real (45 verificações reproduzíveis) | `375185a`, `scripts/teste-e2e.ps1` |
 | T-13 | Documentação técnica completa | `e291f03`, `docs/DOCUMENTACAO_TECNICA.md` |
-| T-14 | Quadro de tarefas | este documento |
-| T-15 | Atualizar o README para a 2ª entrega | commit de atualização do `README.md` |
+| T-14 | Quadro de tarefas | `00d35f8` e quadro online no GitHub Projects |
+| T-15 | Atualizar o README para a 2ª entrega | `920aac6` |
+| T-16 | Publicar a versão final: enviar os commits ao GitHub e criar a tag `entrega-2` | tag `entrega-2` (`920aac6`) |
 
 ## Resultado ao final da 2ª entrega
 
